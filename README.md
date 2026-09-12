@@ -6,7 +6,7 @@
   <img src="assets/banner-light.jpg" alt="Y — Curiosity moves you forward. Slowly.">
 </picture>
 
-*The world's first Slow-Thinking AI.™*
+*The AI that asks before it answers.*
 
 [**ytho.co**](https://ytho.co) · Knoxville, Tennessee · Patent pending
 
@@ -16,18 +16,18 @@
 
 ## What this is
 
-Ask Y anything. Y answers with a better question.
+Ask Y anything. Y asks why. Then it asks why again, until it's clear what
+you're really after. Then it answers that. Once.
 
-Usually "Why?" Usually within three to five business days.
-
-Other products give you answers. Answers are where curiosity goes to nap. Y
-runs a three-step loop instead:
+Most of what we ask a machine isn't quite the question we mean, so we ask
+again. And again. Every answer costs something: electricity, water, the part
+where you think. Y runs the Five Whys instead:
 
 | | |
 |:--|:--|
-| **1. Ask** | Why is the sky blue? Why do we have to go to bed? Why is it called a driveway? |
-| **2. "Why?"** | Y considers your question carefully, then responds with the single most powerful word in science. Then waits. |
-| **3. Repeat** | Every "why" opens a new path. Keep going until you figure it out or get called to dinner. |
+| **1. Ask** | What's the fastest way to learn Spanish? Should we get a dog? How do I sleep better? |
+| **2. "Why?"** | Y asks. You answer. Y asks again. Five times, usually. |
+| **3. Answer** | "So really, you want to know…" and then one answer, to the question you meant. |
 
 The company is imaginary. The curiosity is not.
 
@@ -52,8 +52,9 @@ open index.html
 ```
 
 That's it. There is no build step, no toolchain, no dependencies, no lockfile,
-no framework, and nothing to install. The entire site is one 47 KB HTML file
-with its CSS and JavaScript inline.
+no framework, and nothing to install. The entire site is one 24 KB HTML file
+with its CSS and JavaScript inline. No web fonts either: it uses the system
+stack, so it looks like the platform it's on.
 
 This is not laziness. A page about a snail should not need a bundler.
 
@@ -61,13 +62,18 @@ This is not laziness. A page about a snail should not need a bundler.
 
 | Path | What |
 |:--|:--|
-| `index.html` | The whole site. Markup, styles and the Y engine, all inline. |
-| `assets/y-mark.png` | Avie's snail, lifted from the brand sheet. Used 5 times on the page. |
+| `index.html` | The whole site. Markup, styles, the scroll reveals, the hero loop, the Ask Y demo and the snail that crawls along the bottom as you read. All inline. |
+| `assets/hero.jpg` | The hero poster and the first thing to paint. Also cropped to `og.jpg` for link previews. |
+| `assets/hero-loop.mp4` | Ten seconds of Y on black, H.264, no audio track. `hero-loop.webm` is the same clip in VP9 for browsers without H.264. |
+| `assets/desk.jpg` `fridge-drawing.jpg` `shell.jpg` `sketchbook.jpg` | The four section images. The fridge one is the real drawing. |
+| `assets/crawler.png` | The scroll-progress snail, with alpha, at 3x its 56 px display height. |
+| `assets/y-glyph-white.png` | The one-colour mark used in the nav and the demo tile. |
 | `assets/y-app-icon.png` | Favicon. |
-| `assets/y-*.jpg` | Six illustrations: the device, the app, HQ, the trail, the team, the founder portrait. |
+| `assets/y-mark.png` `y-*.jpg` | The first site's illustrations. No longer on the page, kept so old links and the old link preview keep resolving. |
+| `assets/banner-*.jpg` `snail-progress.jpg` | This README's artwork. |
 | `vercel.json` | Static hosting. Declares that there is nothing to compile. |
 
-Eleven images. One megabyte. Zero build output.
+About 1.5 MB on a first visit, half of it the hero clip. Zero build output.
 
 ## Brand
 
@@ -82,19 +88,23 @@ The logo is exactly three colours. Not approximately three. Exactly.
 The page palette extends that:
 
 ```
---lime       #A3E01F    the brand green
---lime2      #8DC63F    hover and accents
---lime-deep  #5E8F14    text on light backgrounds
---ink        #161C1F    the dark sections
---paper      #FAFBF7    the page ground
+#A3E01F    the brand lime: buttons, eyebrows, Y's side of the conversation
+#C9F25A    the bright stop in the headline gradient, which drifts on a 7 s loop
+#B4EA3A    button hover
+#000000    the page ground
+#F5F5F7    headlines and body copy
+#A1A1A6    supporting copy
+#86868B    captions, spec labels, the footer
+#1D1D1F    the Ask Y demo tile
+#161C1F    ink, for text on lime
 ```
 
 Values: **Curiosity / Clarity / Progress / A brighter tomorrow.**
 
-## Three things this repo learned the hard way
+## Four things this repo learned the hard way
 
-Every one of these shipped broken first. They are written down so they don't
-happen twice.
+Every one of these shipped broken first, or would have. They are written down
+so they don't happen twice.
 
 ### 1. A trailing slash took down every image on the page
 
@@ -146,10 +156,38 @@ which is the cost.
 `index.html` is served at `/` by default and the routing rules are gone.
 Splitting the repo deleted the problem instead of configuring around it.
 
+### 4. The hero clip downloaded twice
+
+The hero is a ten-second clip that has to loop without a visible cut. The
+trick is two stacked `<video>` elements pointing at the same file: play one,
+and 0.9 s before it ends, start the other and crossfade. Simple, and it works.
+
+It also fetched the 790 KB file **twice**. Two elements, two in-flight
+requests, and the browser's media cache did not merge them. The page weighed
+half as much as the network said it did.
+
+**Now:** the script fetches the clip once, wraps it in a blob URL, and hands
+that one URL to both elements. One request, and both copies seek instantly
+because the bytes are already local. While it's on the way, the poster is
+showing, so nothing waits on it.
+
+Two related things that were nearly wrong:
+
+- The clip shipped with a 128 kb/s AAC track. The video is muted, so that was
+  160 KB of silence. It's gone.
+- H.264 in an MP4 plays everywhere people actually browse, but not in the
+  open-source Chromium builds test tools ship, so the loop code had never
+  really been exercised. There is now a VP9 WebM next to the MP4, chosen with
+  `canPlayType`, which is also what the tests play.
+
+Anyone with reduced motion turned on, or data saver, gets the poster and no
+clip at all.
+
 ## Deployment
 
 Pushes to `main` deploy to [ytho.co](https://ytho.co) via Vercel. No build
-command, no install step, `outputDirectory` is the repo root.
+command, no install step, `outputDirectory` is the repo root. Every branch and
+pull request gets a preview deployment first.
 
 To change something: edit `index.html`, push, done.
 
